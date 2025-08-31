@@ -34,16 +34,17 @@ int main(int argc, char *argv[]) {
   file.read((char *)&bufferOffset, 4);
   bmp.dataoffset = bufferOffset;
   std::cout << "Signature: " << bmp.signature;
-  std::cout << " " << "Size in Byte of Signature: " << sizeof(bmp.signature);
+  std::cout << " " << " | Size in Byte of Signature: " << sizeof(bmp.signature);
   std::cout << std::endl;
   std::cout << "FileSize: " << bmp.filesize;
-  std::cout << " " << "Size in Byte of FileSize: " << sizeof(bmp.filesize);
+  std::cout << " " << " | Size in Byte of FileSize: " << sizeof(bmp.filesize);
   std::cout << std::endl;
   std::cout << "Reserved: " << bmp.reserved;
-  std::cout << " " << "Size in Byte of Reserved: " << sizeof(bmp.reserved);
+  std::cout << " " << " | Size in Byte of Reserved: " << sizeof(bmp.reserved);
   std::cout << std::endl;
   std::cout << "DataOffset: " << bmp.dataoffset;
-  std::cout << " " << "Size in Byte of DataOffset: " << sizeof(bmp.dataoffset);
+  std::cout << " "
+            << " | Size in Byte of DataOffset: " << sizeof(bmp.dataoffset);
   std::cout << std::endl;
 
   file.close();
