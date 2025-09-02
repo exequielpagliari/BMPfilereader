@@ -1,8 +1,43 @@
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_surface.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <stdint.h>
+#include <vector>
+
+#include <SDL2/SDL.h>
+#include <stdio.h>
+
+// Using SDL and standard IO
+#include <SDL.h>
+#include <stdio.h>
+
+// Screen dimension constants
+int SCREEN_WIDTH = 640;
+int SCREEN_HEIGHT = 480;
+
+// The window we'll be rendering to
+SDL_Window *gWindow = NULL;
+
+// The surface contained by the window
+SDL_Surface *gScreenSurface = NULL;
+
+// The image we will load and show on the screen
+SDL_Surface *gHelloWorld = NULL;
+
+SDL_Surface *imageNew = NULL;
+
+// Starts up SDL and creates window
+bool init();
+
+// Loads media
+bool loadMedia(const char *argument);
+
+// Frees media and shuts down SDL
+void close();
 
 struct BMPHeader {
   char signature[2];
@@ -23,6 +58,17 @@ struct BMPInfoHeader {
   uint32_t yppm;
   uint32_t colorsimportant;
 };
+
+struct Image {
+
+  uint8_t *rgb_data;
+  int width;
+  int heigth;
+  int depth;
+  int pitch;
+};
+
+Image *img;
 
 int main(int argc, char *argv[]) {
   std::cout << argv[1] << std::endl;
@@ -64,6 +110,7 @@ int main(int argc, char *argv[]) {
   if (bmp.signature[0] == *"B" && bmp.signature[1] == *"M") {
 
     BMPInfoHeader bmpInfo;
+
     file.read((char *)&bmpInfo.size, 4);
     file.read((char *)&bmpInfo.heigth, 4);
     file.read((char *)&bmpInfo.width, 4);
@@ -113,8 +160,117 @@ int main(int argc, char *argv[]) {
               << " | Size in Byte of ColorsImportant: "
               << sizeof(bmpInfo.colorsimportant);
     std::cout << std::endl;
+    std::cout << "Acá Llega";
+    int bytesPerPixel = bmpInfo.bitcount / 8; // ej. 24 bits → 3
+    int rowSize = ((bmpInfo.width * bytesPerPixel + 3) / 4) * 4;
+    int imageSize = rowSize * bmpInfo.heigth;
+    std::cout << "Acá Llega";
+    std::vector<unsigned char> raw(imageSize);
+    int pitch =
+        ((bmpInfo.heigth * bytesPerPixel + 3) / 4) * 4; // stride con padding
+    std::cout << "Acá Llega";
+    file.seekg(bmp.dataoffset, std::ios::beg);
+    file.read((char *)raw.data(), imageSize);
+
+    img->rgb_data = raw.data();
+    img->width = bmpInfo.width;
+    img->heigth = bmpInfo.heigth;
+    img->depth = bmpInfo.bitcount;
+    img->pitch = pitch;
+
+    SCREEN_HEIGHT = bmpInfo.heigth;
+    SCREEN_WIDTH = bmpInfo.width;
   }
 
   file.close();
+
+  // Start up SDL and create window
+  if (!init()) {
+    printf("Failed to initialize!\n");
+  } else {
+    if (!loadMedia(argv[1])) {
+      printf("Failed to load media!\n");
+    } else {
+
+      // Apply the image
+      // SDL_BlitSurface(gHelloWorld, NULL, gScreenSurface, NULL);
+      SDL_BlitSurface(imageNew, NULL, gScreenSurface, NULL);
+      // Update the surface
+      SDL_UpdateWindowSurface(gWindow);
+      // Hack to get window to stay up
+      SDL_Event e;
+      bool quit = false;
+      while (quit == false) {
+        while (SDL_PollEvent(&e)) {
+          if (e.type == SDL_QUIT)
+            quit = true;
+        }
+      }
+    }
+  }
+
+  // Free resources and close SDL
+  close();
+
   return 0;
+}
+
+bool init() {
+  // Initialization flag
+  bool success = true;
+
+  // Initialize SDL
+  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    success = false;
+  } else {
+    // Create window
+    gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED,
+                               SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,
+                               SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    if (gWindow == NULL) {
+      printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+      success = false;
+    } else {
+      // Get window surface
+      gScreenSurface = SDL_GetWindowSurface(gWindow);
+    }
+  }
+
+  return success;
+}
+
+bool loadMedia(const char *argument) {
+  // Loading success flag
+  bool success = true;
+
+  imageNew = SDL_CreateRGBSurfaceFrom(img->rgb_data, img->width, img->heigth,
+                                      img->depth, img->pitch, 0x0000FF,
+                                      0x00FF00, 0xFF0000, 0);
+  if (imageNew == NULL) {
+    printf("Unable to load image ! SDL Error: %s\n", SDL_GetError());
+    success = false;
+  }
+  // Load splash image
+  gHelloWorld = SDL_LoadBMP(argument);
+  if (gHelloWorld == NULL) {
+    printf("Unable to load image ! SDL Error: %s\n", SDL_GetError());
+    success = false;
+  }
+
+  return success;
+}
+
+void close() {
+  // Deallocate surface
+  SDL_FreeSurface(gHelloWorld);
+  SDL_FreeSurface(imageNew);
+  gHelloWorld = NULL;
+  imageNew = NULL;
+  // Destroy window
+  SDL_DestroyWindow(gWindow);
+  gWindow = NULL;
+
+  // Quit SDL subsystems
+  SDL_Quit();
 }

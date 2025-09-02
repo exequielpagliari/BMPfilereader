@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(BMPReader)
 
+find_package(SDL2)
+
 # Define the source directory to be copied
 set(SOURCE_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/imgTest")
 
@@ -12,3 +14,5 @@ set(DESTINATION_DATA_DIR "${CMAKE_CURRENT_BINARY_DIR}/")
 file(COPY "${SOURCE_DATA_DIR}" DESTINATION "${DESTINATION_DATA_DIR}")
 
 add_executable(BMPReader main.cpp)
+
+target_link_libraries(BMPReader PRIVATE SDL2::SDL2 SDL2::SDL2main)
