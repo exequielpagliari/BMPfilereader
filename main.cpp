@@ -1,8 +1,10 @@
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_surface.h>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <stdint.h>
@@ -12,7 +14,7 @@
 #include <stdio.h>
 
 // Using SDL and standard IO
-//#include <SDL.h>
+// #include <SDL.h>
 #include <stdio.h>
 
 // Screen dimension constants
@@ -26,8 +28,6 @@ SDL_Window *gWindow = NULL;
 SDL_Surface *gScreenSurface = NULL;
 
 // The image we will load and show on the screen
-SDL_Surface *gHelloWorld = NULL;
-
 SDL_Surface *imageNew = NULL;
 
 // Starts up SDL and creates window
@@ -48,14 +48,14 @@ struct BMPHeader {
 
 struct BMPInfoHeader {
   uint32_t size;
-  uint32_t width;
-  uint32_t heigth;
+  int32_t width;
+  int32_t heigth;
   uint16_t planes;
   uint16_t bitcount;
   uint32_t compression;
   uint32_t imagesize;
-  uint32_t xppm;
-  uint32_t yppm;
+  int32_t xppm;
+  int32_t yppm;
   uint32_t colorsimportant;
 };
 
@@ -69,6 +69,8 @@ struct Image {
 };
 
 Image img;
+std::vector<unsigned char> raw;
+std::vector<uint8_t> flipped;
 
 int main(int argc, char *argv[]) {
   std::cout << argv[1] << std::endl;
@@ -112,8 +114,8 @@ int main(int argc, char *argv[]) {
     BMPInfoHeader bmpInfo;
 
     file.read((char *)&bmpInfo.size, 4);
-    file.read((char *)&bmpInfo.heigth, 4);
     file.read((char *)&bmpInfo.width, 4);
+    file.read((char *)&bmpInfo.heigth, 4);
     file.read((char *)&bmpInfo.planes, 2);
     file.read((char *)&bmpInfo.bitcount, 2);
     file.read((char *)&bmpInfo.compression, 4);
@@ -160,24 +162,29 @@ int main(int argc, char *argv[]) {
               << " | Size in Byte of ColorsImportant: "
               << sizeof(bmpInfo.colorsimportant);
     std::cout << std::endl;
-    std::cout << "Acá Llega";
+
+    int height = std::abs(bmpInfo.heigth);
     int bytesPerPixel = bmpInfo.bitcount / 8; // ej. 24 bits → 3
     int rowSize = ((bmpInfo.width * bytesPerPixel + 3) / 4) * 4;
-    int imageSize = rowSize * bmpInfo.heigth;
-    std::cout << "Acá Llega";
-    std::vector<unsigned char> raw(imageSize);
-    int pitch =
-        ((bmpInfo.heigth * bytesPerPixel + 3) / 4) * 4; // stride con padding
-    std::cout << "Acá Llega";
+    int imageSize = rowSize * height;
+    raw.resize(imageSize);
     file.seekg(bmp.dataoffset, std::ios::beg);
     file.read((char *)raw.data(), imageSize);
 
     img.rgb_data = raw.data();
     img.width = bmpInfo.width;
-    img.heigth = bmpInfo.heigth;
+    img.heigth = height;
     img.depth = bmpInfo.bitcount;
-    img.pitch = pitch;
+    img.pitch = rowSize;
 
+    flipped.resize(img.heigth * rowSize);
+    for (int y = 0; y < img.heigth; ++y) {
+      const uint8_t *src = raw.data() + (y * img.pitch);
+      uint8_t *dst = flipped.data() + ((img.heigth - 1 - y) * rowSize);
+      std::memcpy(dst, src, rowSize);
+    }
+    img.rgb_data = flipped.data();
+    // img.rgb_data = raw.data();
     SCREEN_HEIGHT = bmpInfo.heigth;
     SCREEN_WIDTH = bmpInfo.width;
   }
@@ -193,7 +200,6 @@ int main(int argc, char *argv[]) {
     } else {
 
       // Apply the image
-      // SDL_BlitSurface(gHelloWorld, NULL, gScreenSurface, NULL);
       SDL_BlitSurface(imageNew, NULL, gScreenSurface, NULL);
       // Update the surface
       SDL_UpdateWindowSurface(gWindow);
@@ -225,7 +231,7 @@ bool init() {
     success = false;
   } else {
     // Create window
-    gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED,
+    gWindow = SDL_CreateWindow("BMPReader", SDL_WINDOWPOS_UNDEFINED,
                                SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,
                                SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     if (gWindow == NULL) {
@@ -244,33 +250,31 @@ bool loadMedia(const char *argument) {
   // Loading success flag
   bool success = true;
 
-  imageNew = SDL_CreateRGBSurfaceFrom(img.rgb_data, img.width, img.heigth,
-                                      img.depth, img.pitch, 0x0000FF,
-                                      0x00FF00, 0xFF0000, 0);
+  imageNew =
+      SDL_CreateRGBSurfaceFrom(img.rgb_data, img.width, img.heigth, img.depth,
+                               img.pitch, 0xFF0000, 0x00FF00, 0x0000FF, 0);
   if (imageNew == NULL) {
     printf("Unable to load image ! SDL Error: %s\n", SDL_GetError());
     success = false;
   }
   // Load splash image
-  gHelloWorld = SDL_LoadBMP(argument);
-  if (gHelloWorld == NULL) {
+  /*gHelloWorld = SDL_LoadBMP(argument);
+  #if (gHelloWorld == NULL) {
     printf("Unable to load image ! SDL Error: %s\n", SDL_GetError());
     success = false;
   }
-
+*/
   return success;
 }
 
 void close() {
   // Deallocate surface
-  SDL_FreeSurface(gHelloWorld);
+  // SDL_FreeSurface(gHelloWorld);
   SDL_FreeSurface(imageNew);
-  gHelloWorld = NULL;
   imageNew = NULL;
   // Destroy window
   SDL_DestroyWindow(gWindow);
   gWindow = NULL;
-
   // Quit SDL subsystems
   SDL_Quit();
 }
