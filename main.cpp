@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 // Using SDL and standard IO
-#include <SDL.h>
+//#include <SDL.h>
 #include <stdio.h>
 
 // Screen dimension constants
@@ -68,7 +68,7 @@ struct Image {
   int pitch;
 };
 
-Image *img;
+Image img;
 
 int main(int argc, char *argv[]) {
   std::cout << argv[1] << std::endl;
@@ -172,11 +172,11 @@ int main(int argc, char *argv[]) {
     file.seekg(bmp.dataoffset, std::ios::beg);
     file.read((char *)raw.data(), imageSize);
 
-    img->rgb_data = raw.data();
-    img->width = bmpInfo.width;
-    img->heigth = bmpInfo.heigth;
-    img->depth = bmpInfo.bitcount;
-    img->pitch = pitch;
+    img.rgb_data = raw.data();
+    img.width = bmpInfo.width;
+    img.heigth = bmpInfo.heigth;
+    img.depth = bmpInfo.bitcount;
+    img.pitch = pitch;
 
     SCREEN_HEIGHT = bmpInfo.heigth;
     SCREEN_WIDTH = bmpInfo.width;
@@ -244,8 +244,8 @@ bool loadMedia(const char *argument) {
   // Loading success flag
   bool success = true;
 
-  imageNew = SDL_CreateRGBSurfaceFrom(img->rgb_data, img->width, img->heigth,
-                                      img->depth, img->pitch, 0x0000FF,
+  imageNew = SDL_CreateRGBSurfaceFrom(img.rgb_data, img.width, img.heigth,
+                                      img.depth, img.pitch, 0x0000FF,
                                       0x00FF00, 0xFF0000, 0);
   if (imageNew == NULL) {
     printf("Unable to load image ! SDL Error: %s\n", SDL_GetError());
